@@ -193,14 +193,14 @@ def get_blocked_queries():
     """Get recently blocked queries from PiHole"""
     try:
         # PiHole v6 API endpoint for queries
+        # Note: PiHole v6 doesn't support status filtering in params, we filter client-side
         print(f"DEBUG: Attempting to fetch blocked queries from PiHole")
         print(f"DEBUG: Session ID before request: {session_manager.session_id}")
         response = make_api_request(
             'get',
             'queries',
             params={
-                'status': 'blocked',
-                'limit': MAX_ENTRIES
+                'limit': 500  # Fetch more to ensure we get enough blocked queries
             }
         )
 
@@ -218,14 +218,19 @@ def get_blocked_queries():
             data = response.json()
 
             # Process and format the blocked queries
+            # PiHole v6 uses "DENYLIST" status for blocked domains
             blocked_list = []
             domain_counts = {}
 
             # Count occurrences and get latest timestamp for each domain
             if 'queries' in data:
                 for query in data['queries']:
+                    # Only process DENYLIST (blocked) queries
+                    if query.get('status') != 'DENYLIST':
+                        continue
+
                     domain = query.get('domain', '')
-                    timestamp = query.get('timestamp', 0)
+                    timestamp = query.get('time', 0)
 
                     if domain:
                         if domain not in domain_counts:
