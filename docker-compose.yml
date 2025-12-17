@@ -1,0 +1,23 @@
+version: '3.8'
+
+services:
+  pihole-easy-add:
+    build: .
+    container_name: pihole-easy-add
+    ports:
+      - "5000:5000"
+    environment:
+      - PIHOLE_HOST=${PIHOLE_HOST:-192.168.1.2}
+      - PIHOLE_PASSWORD=${PIHOLE_PASSWORD}
+      - MAX_ENTRIES=${MAX_ENTRIES:-50}
+      - REFRESH_INTERVAL=${REFRESH_INTERVAL:-10}
+      - SESSION_REFRESH_MINUTES=${SESSION_REFRESH_MINUTES:-30}
+    env_file:
+      - config.env
+    restart: unless-stopped
+    networks:
+      - pihole-network
+
+networks:
+  pihole-network:
+    driver: bridge

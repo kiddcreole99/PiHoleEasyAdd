@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PiHole Easy Add</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>PiHole Easy Add</h1>
+            <p class="subtitle">Recently Blocked Domains</p>
+            <div class="status-bar">
+                <span id="connection-status" class="status-indicator">
+                    <span class="status-dot"></span>
+                    <span class="status-text">Connecting...</span>
+                </span>
+                <span class="entry-count">Showing: <span id="entry-count">0</span> domains</span>
+            </div>
+        </header>
+
+        <div class="search-container">
+            <input
+                type="text"
+                id="search-input"
+                placeholder="Search blocked domains..."
+                class="search-input"
+            >
+        </div>
+
+        <div class="controls">
+            <button id="refresh-btn" class="btn btn-refresh">
+                <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+                    <path d="M14 8c0-3.3-2.7-6-6-6S2 4.7 2 8s2.7 6 6 6" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+                    <path d="M14 8l-2-2m2 2l-2 2" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+                </svg>
+                Refresh Now
+            </button>
+            <label class="auto-refresh-toggle">
+                <input type="checkbox" id="auto-refresh-toggle" checked>
+                <span>Auto-refresh ({{ refresh_interval }}s)</span>
+            </label>
+        </div>
+
+        <div id="error-message" class="error-message" style="display: none;"></div>
+
+        <div id="loading" class="loading">
+            <div class="spinner"></div>
+            <p>Loading blocked domains...</p>
+        </div>
+
+        <div id="blocked-list" class="blocked-list"></div>
+
+        <div id="empty-state" class="empty-state" style="display: none;">
+            <svg width="64" height="64" viewBox="0 0 64 64" fill="none">
+                <circle cx="32" cy="32" r="30" stroke="currentColor" stroke-width="2"/>
+                <path d="M32 20v16m0 8h.01" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+            </svg>
+            <h2>No blocked domains found</h2>
+            <p>Either nothing has been blocked recently or your search returned no results.</p>
+        </div>
+    </div>
+
+    <script>
+        const MAX_ENTRIES = {{ max_entries }};
+        const REFRESH_INTERVAL = {{ refresh_interval }} * 1000;
+    </script>
+    <script src="{{ url_for('static', filename='script.js') }}"></script>
+</body>
+</html>
