@@ -194,15 +194,16 @@ def get_blocked_queries():
             data = response.json()
 
             # Process and format the blocked queries
-            # PiHole v6 uses "DENYLIST" status for blocked domains
+            # PiHole v6 uses "DENYLIST" and "GRAVITY" statuses for blocked domains
             blocked_list = []
             domain_counts = {}
+            blocked_statuses = ['DENYLIST', 'GRAVITY']
 
             # Count occurrences and get latest timestamp for each domain
             if 'queries' in data:
                 for query in data['queries']:
-                    # Only process DENYLIST (blocked) queries
-                    if query.get('status') != 'DENYLIST':
+                    # Only process blocked queries (DENYLIST or GRAVITY)
+                    if query.get('status') not in blocked_statuses:
                         continue
 
                     domain = query.get('domain', '')
