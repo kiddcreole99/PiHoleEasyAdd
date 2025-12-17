@@ -33,11 +33,16 @@ class SessionManager:
     def login(self):
         """Authenticate with PiHole and get a session ID"""
         try:
+            print(f"DEBUG: Attempting login to {PIHOLE_AUTH_URL}")
             response = requests.post(
                 PIHOLE_AUTH_URL,
                 json={'password': PIHOLE_PASSWORD},
                 timeout=10
             )
+
+            print(f"DEBUG: Login response status: {response.status_code}")
+            print(f"DEBUG: Login response headers: {dict(response.headers)}")
+            print(f"DEBUG: Login response body: {response.text[:500]}")
 
             if response.status_code == 200:
                 data = response.json()
@@ -47,6 +52,7 @@ class SessionManager:
                         # Set expiry to refresh time
                         self.session_expiry = datetime.now() + timedelta(minutes=SESSION_REFRESH_MINUTES)
                         self.last_error = None
+                    print(f"DEBUG: Successfully logged in with SID from JSON: {self.session_id}")
                     return True
 
             # Try to extract from cookies if not in JSON
@@ -54,11 +60,16 @@ class SessionManager:
                 cookies = response.headers['Set-Cookie']
                 if 'sid=' in cookies:
                     sid = cookies.split('sid=')[1].split(';')[0]
-                    with self.lock:
-                        self.session_id = sid
-                        self.session_expiry = datetime.now() + timedelta(minutes=SESSION_REFRESH_MINUTES)
-                        self.last_error = None
-                    return True
+                    # Check if sid is valid (not "deleted" or empty)
+                    if sid and sid != 'deleted':
+                        with self.lock:
+                            self.session_id = sid
+                            self.session_expiry = datetime.now() + timedelta(minutes=SESSION_REFRESH_MINUTES)
+                            self.last_error = None
+                        print(f"DEBUG: Successfully logged in with SID: {sid}")
+                        return True
+                    else:
+                        print(f"DEBUG: Received invalid SID: {sid}")
 
             self.last_error = f"Login failed: {response.status_code}"
             return False
@@ -70,13 +81,14 @@ class SessionManager:
     def get_session_id(self):
         """Get current session ID, refresh if needed"""
         with self.lock:
-            # Check if session is expired or doesn't exist
-            if not self.session_id or (self.session_expiry and datetime.now() >= self.session_expiry):
+            # Check if session is expired, doesn't exist, or is invalid
+            if not self.session_id or self.session_id == 'deleted' or (self.session_expiry and datetime.now() >= self.session_expiry):
                 # Release lock before calling login (which acquires it)
                 pass
 
         # Login outside the lock
-        if not self.session_id or (self.session_expiry and datetime.now() >= self.session_expiry):
+        if not self.session_id or self.session_id == 'deleted' or (self.session_expiry and datetime.now() >= self.session_expiry):
+            print(f"DEBUG: Session invalid or expired, logging in again")
             self.login()
 
         with self.lock:
