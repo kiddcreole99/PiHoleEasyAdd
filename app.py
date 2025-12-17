@@ -267,10 +267,10 @@ def add_to_whitelist():
                 'error': 'Domain is required'
             }), 400
 
-        # PiHole v6 API endpoint for adding to whitelist
+        # PiHole v6 API endpoint for adding to allow list (exact match)
         response = make_api_request(
             'post',
-            'domains/whitelist',
+            'domains/allow/exact',
             json={'domain': domain}
         )
 
