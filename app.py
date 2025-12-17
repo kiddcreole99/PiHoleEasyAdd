@@ -134,6 +134,9 @@ def make_api_request(method, endpoint, **kwargs):
         try:
             headers = get_headers()
             url = f"{PIHOLE_API_URL}/{endpoint}"
+            print(f"DEBUG: Making {method.upper()} request to {url}")
+            print(f"DEBUG: Headers: {headers}")
+            print(f"DEBUG: Params: {kwargs.get('params', {})}")
 
             response = requests.request(
                 method,
@@ -143,8 +146,12 @@ def make_api_request(method, endpoint, **kwargs):
                 **{k: v for k, v in kwargs.items() if k != 'timeout'}
             )
 
+            print(f"DEBUG: Response status code: {response.status_code}")
+            print(f"DEBUG: Response text (first 200 chars): {response.text[:200]}")
+
             # If unauthorized, try to refresh session and retry
             if response.status_code == 401 and attempt < max_retries - 1:
+                print(f"DEBUG: Got 401, refreshing session")
                 session_manager.invalidate()
                 session_manager.login()
                 continue
@@ -152,6 +159,7 @@ def make_api_request(method, endpoint, **kwargs):
             return response
 
         except Exception as e:
+            print(f"DEBUG: Exception in make_api_request: {type(e).__name__}: {str(e)}")
             if attempt < max_retries - 1:
                 time.sleep(1)
                 continue
@@ -173,6 +181,8 @@ def get_blocked_queries():
     """Get recently blocked queries from PiHole"""
     try:
         # PiHole v6 API endpoint for queries
+        print(f"DEBUG: Attempting to fetch blocked queries from PiHole")
+        print(f"DEBUG: Session ID before request: {session_manager.session_id}")
         response = make_api_request(
             'get',
             'queries',
@@ -183,10 +193,14 @@ def get_blocked_queries():
         )
 
         if not response:
+            print(f"DEBUG: make_api_request returned None")
+            print(f"DEBUG: Session manager last error: {session_manager.last_error}")
             return jsonify({
                 'success': False,
-                'error': 'Failed to connect to PiHole API'
+                'error': f'Failed to connect to PiHole API. Last error: {session_manager.last_error}'
             }), 500
+
+        print(f"DEBUG: Got response with status code: {response.status_code}")
 
         if response.status_code == 200:
             data = response.json()
