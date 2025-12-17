@@ -10,6 +10,22 @@
     --success-color: #10b981;
     --success-hover: #059669;
     --danger-color: #ef4444;
+}
+
+/* Dark theme (default) */
+:root,
+:root[data-theme="dark"] {
+    --bg-color: #0f172a;
+    --card-bg: #1e293b;
+    --text-primary: #f1f5f9;
+    --text-secondary: #94a3b8;
+    --border-color: #334155;
+    --shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+    --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.4);
+}
+
+/* Light theme */
+:root[data-theme="light"] {
     --bg-color: #f5f5f5;
     --card-bg: #ffffff;
     --text-primary: #1f2937;
@@ -24,6 +40,7 @@ body {
     background: var(--bg-color);
     color: var(--text-primary);
     line-height: 1.6;
+    transition: background-color 0.3s ease, color 0.3s ease;
 }
 
 .container {
@@ -160,9 +177,32 @@ h1 {
     cursor: pointer;
 }
 
+.theme-toggle {
+    background: var(--card-bg);
+    color: var(--text-primary);
+    border: 1px solid var(--border-color);
+    padding: 0.625rem 1rem;
+    border-radius: 6px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    transition: all 0.2s;
+    font-size: 0.875rem;
+}
+
+.theme-toggle:hover {
+    background: var(--bg-color);
+}
+
+.theme-toggle svg {
+    width: 16px;
+    height: 16px;
+}
+
 .error-message {
-    background: #fee2e2;
-    color: #991b1b;
+    background: rgba(239, 68, 68, 0.1);
+    color: var(--danger-color);
     padding: 1rem;
     border-radius: 8px;
     margin-bottom: 1rem;

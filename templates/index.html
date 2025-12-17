@@ -30,13 +30,24 @@
         </div>
 
         <div class="controls">
-            <button id="refresh-btn" class="btn btn-refresh">
-                <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-                    <path d="M14 8c0-3.3-2.7-6-6-6S2 4.7 2 8s2.7 6 6 6" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
-                    <path d="M14 8l-2-2m2 2l-2 2" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
-                </svg>
-                Refresh Now
-            </button>
+            <div style="display: flex; gap: 1rem; align-items: center;">
+                <button id="refresh-btn" class="btn btn-refresh">
+                    <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+                        <path d="M14 8c0-3.3-2.7-6-6-6S2 4.7 2 8s2.7 6 6 6" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+                        <path d="M14 8l-2-2m2 2l-2 2" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+                    </svg>
+                    Refresh Now
+                </button>
+                <button id="theme-toggle" class="theme-toggle" title="Toggle dark/light mode">
+                    <svg id="theme-icon-dark" width="16" height="16" viewBox="0 0 16 16" fill="none">
+                        <path d="M8 1v2m0 10v2M3.93 3.93l1.41 1.41m5.32 5.32l1.41 1.41M1 8h2m10 0h2M3.93 12.07l1.41-1.41m5.32-5.32l1.41-1.41" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+                        <circle cx="8" cy="8" r="3" stroke="currentColor" stroke-width="1.5"/>
+                    </svg>
+                    <svg id="theme-icon-light" width="16" height="16" viewBox="0 0 16 16" fill="none" style="display: none;">
+                        <path d="M14 8.5c-.83 3.03-3.58 5.25-6.83 5.25A7.25 7.25 0 1 1 13.75 7c0 .47-.05.93-.14 1.37" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+                    </svg>
+                </button>
+            </div>
             <label class="auto-refresh-toggle">
                 <input type="checkbox" id="auto-refresh-toggle" checked>
                 <span>Auto-refresh ({{ refresh_interval }}s)</span>

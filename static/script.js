@@ -1,5 +1,6 @@
 // State management
 let blockedDomains = [];
+let persistentDomains = []; // Maintains last 20 domains across refreshes
 let filteredDomains = [];
 let autoRefreshInterval = null;
 let isLoading = false;
@@ -12,11 +13,15 @@ const errorMessageEl = document.getElementById('error-message');
 const searchInput = document.getElementById('search-input');
 const refreshBtn = document.getElementById('refresh-btn');
 const autoRefreshToggle = document.getElementById('auto-refresh-toggle');
+const themeToggle = document.getElementById('theme-toggle');
+const themeIconDark = document.getElementById('theme-icon-dark');
+const themeIconLight = document.getElementById('theme-icon-light');
 const connectionStatus = document.getElementById('connection-status');
 const entryCount = document.getElementById('entry-count');
 
 // Initialize app
 document.addEventListener('DOMContentLoaded', () => {
+    initializeTheme();
     checkHealth();
     fetchBlockedDomains();
     setupEventListeners();
@@ -28,6 +33,35 @@ function setupEventListeners() {
     searchInput.addEventListener('input', handleSearch);
     refreshBtn.addEventListener('click', handleRefresh);
     autoRefreshToggle.addEventListener('change', handleAutoRefreshToggle);
+    themeToggle.addEventListener('click', toggleTheme);
+}
+
+// Initialize theme from localStorage or default to dark
+function initializeTheme() {
+    const savedTheme = localStorage.getItem('theme') || 'dark';
+    document.documentElement.setAttribute('data-theme', savedTheme);
+    updateThemeIcon(savedTheme);
+}
+
+// Toggle between dark and light theme
+function toggleTheme() {
+    const currentTheme = document.documentElement.getAttribute('data-theme') || 'dark';
+    const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
+
+    document.documentElement.setAttribute('data-theme', newTheme);
+    localStorage.setItem('theme', newTheme);
+    updateThemeIcon(newTheme);
+}
+
+// Update theme icon based on current theme
+function updateThemeIcon(theme) {
+    if (theme === 'dark') {
+        themeIconDark.style.display = 'block';
+        themeIconLight.style.display = 'none';
+    } else {
+        themeIconDark.style.display = 'none';
+        themeIconLight.style.display = 'block';
+    }
 }
 
 // Check PiHole connection health
@@ -68,7 +102,12 @@ async function fetchBlockedDomains() {
 
         if (result.success) {
             blockedDomains = result.data;
-            filteredDomains = [...blockedDomains];
+
+            // Merge new domains with persistent list
+            mergePersistentDomains(blockedDomains);
+
+            // Use persistent domains for display
+            filteredDomains = [...persistentDomains];
             renderBlockedList();
             updateConnectionStatus('connected', 'Connected to PiHole');
         } else {
@@ -84,14 +123,45 @@ async function fetchBlockedDomains() {
     }
 }
 
+// Merge new domains with persistent list, keeping last 20
+function mergePersistentDomains(newDomains) {
+    // Create a map of existing domains for quick lookup
+    const domainMap = new Map();
+
+    // Add existing persistent domains to map
+    persistentDomains.forEach(item => {
+        domainMap.set(item.domain, item);
+    });
+
+    // Add or update with new domains
+    newDomains.forEach(item => {
+        const existing = domainMap.get(item.domain);
+        // Keep the entry with the latest timestamp and highest count
+        if (!existing || item.latest_timestamp > existing.latest_timestamp) {
+            domainMap.set(item.domain, {
+                ...item,
+                count: existing ? Math.max(item.count, existing.count) : item.count
+            });
+        } else if (existing) {
+            // Update count if timestamp is same but count increased
+            existing.count = Math.max(item.count, existing.count);
+        }
+    });
+
+    // Convert back to array, sort by timestamp, keep only 20 most recent
+    persistentDomains = Array.from(domainMap.values())
+        .sort((a, b) => b.latest_timestamp - a.latest_timestamp)
+        .slice(0, 20);
+}
+
 // Handle search/filter
 function handleSearch(e) {
     const searchTerm = e.target.value.toLowerCase().trim();
 
     if (searchTerm === '') {
-        filteredDomains = [...blockedDomains];
+        filteredDomains = [...persistentDomains];
     } else {
-        filteredDomains = blockedDomains.filter(item =>
+        filteredDomains = persistentDomains.filter(item =>
             item.domain.toLowerCase().includes(searchTerm)
         );
     }
@@ -198,8 +268,9 @@ async function addToWhitelist(domain) {
         if (result.success) {
             showToast(`Successfully whitelisted: ${domain}`, 'success');
 
-            // Remove from current list
+            // Remove from all lists
             blockedDomains = blockedDomains.filter(item => item.domain !== domain);
+            persistentDomains = persistentDomains.filter(item => item.domain !== domain);
             filteredDomains = filteredDomains.filter(item => item.domain !== domain);
 
             // Animate out and remove
