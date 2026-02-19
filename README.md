@@ -1,6 +1,6 @@
 # PiHole Easy Add
 
-A web-based application for managing PiHole blocked domains. View recently blocked URLs and easily add them to your PiHole whitelist with a single click.
+A web-based application for managing PiHole blocked domains. View recently blocked URLs and easily add them to your PiHole whitelist with a single click. Helpful for family members to self-manage when sites are erroneously blocked. 
 
 ## Features
 
