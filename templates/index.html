@@ -20,6 +20,29 @@
             </div>
         </header>
 
+        <!-- Blocking Control -->
+        <div class="blocking-control" id="blocking-control">
+            <div class="blocking-status-row">
+                <span class="blocking-indicator" id="blocking-indicator">
+                    <span class="blocking-dot" id="blocking-dot"></span>
+                    <span id="blocking-text">Checking...</span>
+                </span>
+                <span id="blocking-countdown" class="blocking-countdown" style="display:none;"></span>
+            </div>
+            <div class="blocking-actions">
+                <select id="disable-duration" class="duration-select">
+                    <option value="10">10 seconds</option>
+                    <option value="30">30 seconds</option>
+                    <option value="300">5 minutes</option>
+                    <option value="custom">Custom...</option>
+                </select>
+                <input type="number" id="custom-duration" class="custom-duration-input" placeholder="Seconds" min="1" style="display:none;">
+                <button id="disable-blocking-btn" class="btn btn-danger">Disable Blocking</button>
+                <button id="enable-blocking-btn" class="btn btn-success" style="display:none;">Re-enable Now</button>
+            </div>
+        </div>
+
+        <!-- Search -->
         <div class="search-container">
             <input
                 type="text"
@@ -48,10 +71,16 @@
                     </svg>
                 </button>
             </div>
-            <label class="auto-refresh-toggle">
-                <input type="checkbox" id="auto-refresh-toggle" checked>
-                <span>Auto-refresh ({{ refresh_interval }}s)</span>
-            </label>
+            <div class="refresh-control">
+                <label class="refresh-label" for="refresh-select">Refresh:</label>
+                <select id="refresh-select" class="refresh-select">
+                    <option value="2">Live</option>
+                    <option value="10" selected>10s</option>
+                    <option value="20">20s</option>
+                    <option value="30">30s</option>
+                    <option value="0">Off</option>
+                </select>
+            </div>
         </div>
 
         <div id="error-message" class="error-message" style="display: none;"></div>

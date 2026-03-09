@@ -14,6 +14,7 @@ app = Flask(__name__)
 PIHOLE_HOST = os.getenv('PIHOLE_HOST', '192.168.1.2')
 PIHOLE_PASSWORD = os.getenv('PIHOLE_PASSWORD', '')
 MAX_ENTRIES = int(os.getenv('MAX_ENTRIES', '50'))
+QUERY_LIMIT = int(os.getenv('QUERY_LIMIT', '1000'))
 REFRESH_INTERVAL = int(os.getenv('REFRESH_INTERVAL', '10'))
 SESSION_REFRESH_MINUTES = int(os.getenv('SESSION_REFRESH_MINUTES', '30'))
 
@@ -180,7 +181,7 @@ def get_blocked_queries():
             'get',
             'queries',
             params={
-                'limit': 500  # Fetch more to ensure we get enough blocked queries
+                'limit': QUERY_LIMIT
             }
         )
 
@@ -308,6 +309,47 @@ def add_to_whitelist():
             'success': False,
             'error': f'Error processing request: {str(e)}'
         }), 500
+
+
+@app.route('/api/blocking', methods=['GET'])
+def get_blocking_status():
+    """Get current Pi-hole blocking status"""
+    try:
+        response = make_api_request('get', 'dns/blocking', timeout=5)
+        if not response:
+            return jsonify({'success': False, 'error': 'Failed to connect'}), 500
+        if response.status_code == 200:
+            data = response.json()
+            return jsonify({
+                'success': True,
+                'blocking': data.get('blocking', True),
+                'timer': data.get('timer')
+            })
+        return jsonify({'success': False, 'error': f'API error: {response.status_code}'}), response.status_code
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
+@app.route('/api/blocking', methods=['POST'])
+def set_blocking():
+    """Enable or disable Pi-hole blocking"""
+    try:
+        data = request.get_json()
+        blocking = data.get('blocking', True)
+        timer = data.get('timer')
+
+        payload = {'blocking': blocking}
+        if timer is not None and not blocking:
+            payload['timer'] = int(timer)
+
+        response = make_api_request('post', 'dns/blocking', json=payload)
+        if not response:
+            return jsonify({'success': False, 'error': 'Failed to connect'}), 500
+        if response.status_code == 200:
+            return jsonify({'success': True, 'data': response.json()})
+        return jsonify({'success': False, 'error': f'API error: {response.status_code}'}), response.status_code
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
 
 
 @app.route('/api/health', methods=['GET'])

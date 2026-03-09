@@ -1,9 +1,11 @@
 // State management
 let blockedDomains = [];
-let persistentDomains = []; // Maintains last 20 domains across refreshes
+let persistentDomains = [];
 let filteredDomains = [];
 let autoRefreshInterval = null;
 let isLoading = false;
+let blockingCountdownInterval = null;
+let blockingDisabledUntil = null;
 
 // DOM elements
 const blockedList = document.getElementById('blocked-list');
@@ -12,12 +14,19 @@ const emptyStateEl = document.getElementById('empty-state');
 const errorMessageEl = document.getElementById('error-message');
 const searchInput = document.getElementById('search-input');
 const refreshBtn = document.getElementById('refresh-btn');
-const autoRefreshToggle = document.getElementById('auto-refresh-toggle');
+const refreshSelect = document.getElementById('refresh-select');
 const themeToggle = document.getElementById('theme-toggle');
 const themeIconDark = document.getElementById('theme-icon-dark');
 const themeIconLight = document.getElementById('theme-icon-light');
 const connectionStatus = document.getElementById('connection-status');
 const entryCount = document.getElementById('entry-count');
+const disableDurationSelect = document.getElementById('disable-duration');
+const customDurationInput = document.getElementById('custom-duration');
+const disableBlockingBtn = document.getElementById('disable-blocking-btn');
+const enableBlockingBtn = document.getElementById('enable-blocking-btn');
+const blockingDot = document.getElementById('blocking-dot');
+const blockingText = document.getElementById('blocking-text');
+const blockingCountdown = document.getElementById('blocking-countdown');
 
 // Initialize app
 document.addEventListener('DOMContentLoaded', () => {
@@ -26,34 +35,36 @@ document.addEventListener('DOMContentLoaded', () => {
     fetchBlockedDomains();
     setupEventListeners();
     startAutoRefresh();
+    checkBlockingStatus();
 });
 
 // Setup event listeners
 function setupEventListeners() {
     searchInput.addEventListener('input', handleSearch);
     refreshBtn.addEventListener('click', handleRefresh);
-    autoRefreshToggle.addEventListener('change', handleAutoRefreshToggle);
+    refreshSelect.addEventListener('change', handleRefreshSelectChange);
     themeToggle.addEventListener('click', toggleTheme);
+    disableDurationSelect.addEventListener('change', handleDurationChange);
+    disableBlockingBtn.addEventListener('click', handleDisableBlocking);
+    enableBlockingBtn.addEventListener('click', handleEnableBlocking);
 }
 
-// Initialize theme from localStorage or default to dark
+// ── Theme ─────────────────────────────────────────────────────────────────────
+
 function initializeTheme() {
     const savedTheme = localStorage.getItem('theme') || 'dark';
     document.documentElement.setAttribute('data-theme', savedTheme);
     updateThemeIcon(savedTheme);
 }
 
-// Toggle between dark and light theme
 function toggleTheme() {
     const currentTheme = document.documentElement.getAttribute('data-theme') || 'dark';
     const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
-
     document.documentElement.setAttribute('data-theme', newTheme);
     localStorage.setItem('theme', newTheme);
     updateThemeIcon(newTheme);
 }
 
-// Update theme icon based on current theme
 function updateThemeIcon(theme) {
     if (theme === 'dark') {
         themeIconDark.style.display = 'block';
@@ -64,12 +75,12 @@ function updateThemeIcon(theme) {
     }
 }
 
-// Check PiHole connection health
+// ── Connection & Health ───────────────────────────────────────────────────────
+
 async function checkHealth() {
     try {
         const response = await fetch('/api/health');
         const data = await response.json();
-
         if (data.pihole_reachable) {
             updateConnectionStatus('connected', 'Connected to PiHole');
         } else {
@@ -82,13 +93,13 @@ async function checkHealth() {
     }
 }
 
-// Update connection status indicator
 function updateConnectionStatus(status, text) {
     connectionStatus.className = `status-indicator ${status}`;
     connectionStatus.querySelector('.status-text').textContent = text;
 }
 
-// Fetch blocked domains from API
+// ── Blocked Domains ───────────────────────────────────────────────────────────
+
 async function fetchBlockedDomains() {
     if (isLoading) return;
 
@@ -102,11 +113,7 @@ async function fetchBlockedDomains() {
 
         if (result.success) {
             blockedDomains = result.data;
-
-            // Merge new domains with persistent list
             mergePersistentDomains(blockedDomains);
-
-            // Use persistent domains for display
             filteredDomains = [...persistentDomains];
             renderBlockedList();
             updateConnectionStatus('connected', 'Connected to PiHole');
@@ -123,80 +130,51 @@ async function fetchBlockedDomains() {
     }
 }
 
-// Merge new domains with persistent list, keeping last 20
 function mergePersistentDomains(newDomains) {
-    // Create a map of existing domains for quick lookup
     const domainMap = new Map();
-
-    // Add existing persistent domains to map
-    persistentDomains.forEach(item => {
-        domainMap.set(item.domain, item);
-    });
-
-    // Add or update with new domains
+    persistentDomains.forEach(item => { domainMap.set(item.domain, item); });
     newDomains.forEach(item => {
         const existing = domainMap.get(item.domain);
-        // Keep the entry with the latest timestamp and highest count
         if (!existing || item.latest_timestamp > existing.latest_timestamp) {
             domainMap.set(item.domain, {
                 ...item,
                 count: existing ? Math.max(item.count, existing.count) : item.count
             });
         } else if (existing) {
-            // Update count if timestamp is same but count increased
             existing.count = Math.max(item.count, existing.count);
         }
     });
-
-    // Convert back to array, sort by timestamp, keep only 20 most recent
     persistentDomains = Array.from(domainMap.values())
         .sort((a, b) => b.latest_timestamp - a.latest_timestamp)
         .slice(0, 20);
 }
 
-// Handle search/filter
-function handleSearch(e) {
-    const searchTerm = e.target.value.toLowerCase().trim();
+// ── Refresh Control ───────────────────────────────────────────────────────────
 
-    if (searchTerm === '') {
-        filteredDomains = [...persistentDomains];
-    } else {
-        filteredDomains = persistentDomains.filter(item =>
-            item.domain.toLowerCase().includes(searchTerm)
-        );
+function handleRefreshSelectChange() {
+    stopAutoRefresh();
+    const val = parseInt(refreshSelect.value);
+    if (val > 0) {
+        startAutoRefresh(val * 1000);
     }
-
-    renderBlockedList();
 }
 
-// Handle manual refresh
 function handleRefresh() {
     fetchBlockedDomains();
 }
 
-// Handle auto-refresh toggle
-function handleAutoRefreshToggle(e) {
-    if (e.target.checked) {
-        startAutoRefresh();
-    } else {
-        stopAutoRefresh();
-    }
-}
-
-// Start auto-refresh
-function startAutoRefresh() {
-    if (autoRefreshInterval) {
-        clearInterval(autoRefreshInterval);
-    }
-
+function startAutoRefresh(intervalMs) {
+    if (autoRefreshInterval) clearInterval(autoRefreshInterval);
+    const ms = intervalMs !== undefined ? intervalMs : (() => {
+        const val = parseInt(refreshSelect.value);
+        return val > 0 ? val * 1000 : null;
+    })();
+    if (!ms) return;
     autoRefreshInterval = setInterval(() => {
-        if (!isLoading) {
-            fetchBlockedDomains();
-        }
-    }, REFRESH_INTERVAL);
+        if (!isLoading) fetchBlockedDomains();
+    }, ms);
 }
 
-// Stop auto-refresh
 function stopAutoRefresh() {
     if (autoRefreshInterval) {
         clearInterval(autoRefreshInterval);
@@ -204,7 +182,166 @@ function stopAutoRefresh() {
     }
 }
 
-// Render blocked domains list
+// ── Blocking Control ──────────────────────────────────────────────────────────
+
+async function checkBlockingStatus() {
+    try {
+        const response = await fetch('/api/blocking');
+        const data = await response.json();
+        if (data.success) {
+            updateBlockingUI(data.blocking, data.timer);
+        }
+    } catch (e) {
+        // Silently fail — blocking status is non-critical
+    }
+}
+
+function updateBlockingUI(isBlocking, timer) {
+    if (isBlocking) {
+        blockingDot.className = 'blocking-dot active';
+        blockingText.textContent = 'Blocking Active';
+        blockingCountdown.style.display = 'none';
+        disableBlockingBtn.style.display = 'inline-flex';
+        enableBlockingBtn.style.display = 'none';
+        clearBlockingCountdown();
+    } else {
+        blockingDot.className = 'blocking-dot disabled';
+        blockingText.textContent = 'Blocking Disabled';
+        disableBlockingBtn.style.display = 'none';
+        enableBlockingBtn.style.display = 'inline-flex';
+
+        // Start countdown if we have timer info
+        if (timer && timer.delay) {
+            const endsAt = (timer.started + timer.delay) * 1000;
+            startBlockingCountdown(endsAt);
+        } else if (blockingDisabledUntil) {
+            startBlockingCountdown(blockingDisabledUntil);
+        } else {
+            blockingCountdown.style.display = 'none';
+        }
+    }
+}
+
+function startBlockingCountdown(endsAtMs) {
+    clearBlockingCountdown();
+    blockingCountdown.style.display = 'inline';
+    blockingDisabledUntil = endsAtMs;
+
+    function tick() {
+        const remaining = Math.max(0, Math.ceil((endsAtMs - Date.now()) / 1000));
+        if (remaining <= 0) {
+            blockingCountdown.style.display = 'none';
+            clearBlockingCountdown();
+            blockingDisabledUntil = null;
+            // Re-check status — Pi-hole should have re-enabled by now
+            setTimeout(checkBlockingStatus, 1000);
+            return;
+        }
+        const m = Math.floor(remaining / 60);
+        const s = remaining % 60;
+        blockingCountdown.textContent = m > 0
+            ? `(re-enables in ${m}m ${s}s)`
+            : `(re-enables in ${s}s)`;
+    }
+
+    tick();
+    blockingCountdownInterval = setInterval(tick, 1000);
+}
+
+function clearBlockingCountdown() {
+    if (blockingCountdownInterval) {
+        clearInterval(blockingCountdownInterval);
+        blockingCountdownInterval = null;
+    }
+}
+
+function handleDurationChange() {
+    if (disableDurationSelect.value === 'custom') {
+        customDurationInput.style.display = 'inline-block';
+        customDurationInput.focus();
+    } else {
+        customDurationInput.style.display = 'none';
+    }
+}
+
+async function handleDisableBlocking() {
+    let seconds;
+    if (disableDurationSelect.value === 'custom') {
+        seconds = parseInt(customDurationInput.value);
+        if (!seconds || seconds < 1) {
+            showToast('Please enter a valid number of seconds.', 'error');
+            return;
+        }
+    } else {
+        seconds = parseInt(disableDurationSelect.value);
+    }
+
+    disableBlockingBtn.disabled = true;
+    disableBlockingBtn.textContent = 'Disabling...';
+
+    try {
+        const response = await fetch('/api/blocking', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ blocking: false, timer: seconds })
+        });
+        const result = await response.json();
+
+        if (result.success) {
+            blockingDisabledUntil = Date.now() + (seconds * 1000);
+            updateBlockingUI(false, null);
+            const label = seconds < 60 ? `${seconds}s` : `${seconds / 60}m`;
+            showToast(`Blocking disabled for ${label}`, 'warning');
+        } else {
+            showToast(`Failed to disable blocking: ${result.error}`, 'error');
+        }
+    } catch (e) {
+        showToast('Failed to disable blocking.', 'error');
+    } finally {
+        disableBlockingBtn.disabled = false;
+        disableBlockingBtn.textContent = 'Disable Blocking';
+    }
+}
+
+async function handleEnableBlocking() {
+    enableBlockingBtn.disabled = true;
+    enableBlockingBtn.textContent = 'Enabling...';
+
+    try {
+        const response = await fetch('/api/blocking', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ blocking: true })
+        });
+        const result = await response.json();
+
+        if (result.success) {
+            blockingDisabledUntil = null;
+            updateBlockingUI(true, null);
+            showToast('Blocking re-enabled.', 'success');
+        } else {
+            showToast(`Failed to enable blocking: ${result.error}`, 'error');
+        }
+    } catch (e) {
+        showToast('Failed to enable blocking.', 'error');
+    } finally {
+        enableBlockingBtn.disabled = false;
+        enableBlockingBtn.textContent = 'Re-enable Now';
+    }
+}
+
+// ── Search ────────────────────────────────────────────────────────────────────
+
+function handleSearch(e) {
+    const searchTerm = e.target.value.toLowerCase().trim();
+    filteredDomains = searchTerm === ''
+        ? [...persistentDomains]
+        : persistentDomains.filter(item => item.domain.toLowerCase().includes(searchTerm));
+    renderBlockedList();
+}
+
+// ── Render ────────────────────────────────────────────────────────────────────
+
 function renderBlockedList() {
     entryCount.textContent = filteredDomains.length;
 
@@ -243,12 +380,12 @@ function renderBlockedList() {
     `).join('');
 }
 
-// Add domain to whitelist
+// ── Whitelist ─────────────────────────────────────────────────────────────────
+
 async function addToWhitelist(domain) {
     const itemEl = document.querySelector(`[data-domain="${domain}"]`);
     if (!itemEl) return;
 
-    // Disable button and add loading state
     const button = itemEl.querySelector('.btn-allow');
     button.disabled = true;
     button.textContent = 'Adding...';
@@ -257,27 +394,18 @@ async function addToWhitelist(domain) {
     try {
         const response = await fetch('/api/whitelist', {
             method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            },
+            headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ domain }),
         });
-
         const result = await response.json();
 
         if (result.success) {
             showToast(`Successfully whitelisted: ${domain}`, 'success');
-
-            // Remove from all lists
             blockedDomains = blockedDomains.filter(item => item.domain !== domain);
             persistentDomains = persistentDomains.filter(item => item.domain !== domain);
             filteredDomains = filteredDomains.filter(item => item.domain !== domain);
-
-            // Animate out and remove
             itemEl.style.animation = 'fadeOut 0.3s ease-out';
-            setTimeout(() => {
-                renderBlockedList();
-            }, 300);
+            setTimeout(() => { renderBlockedList(); }, 300);
         } else {
             showToast(`Failed to whitelist: ${result.error}`, 'error');
             button.disabled = false;
@@ -292,84 +420,61 @@ async function addToWhitelist(domain) {
     }
 }
 
-// Show loading state
+// ── Utilities ─────────────────────────────────────────────────────────────────
+
 function showLoading(show) {
     loadingEl.style.display = show ? 'block' : 'none';
     refreshBtn.disabled = show;
 }
 
-// Show error message
 function showError(message) {
     errorMessageEl.textContent = message;
     errorMessageEl.style.display = 'block';
 }
 
-// Hide error message
 function hideError() {
     errorMessageEl.style.display = 'none';
 }
 
-// Show toast notification
 function showToast(message, type = 'success') {
     const toast = document.createElement('div');
     toast.className = `toast ${type}`;
     toast.textContent = message;
-
     document.body.appendChild(toast);
-
     setTimeout(() => {
         toast.style.animation = 'slideOut 0.3s ease-in';
-        setTimeout(() => {
-            document.body.removeChild(toast);
-        }, 300);
+        setTimeout(() => { document.body.removeChild(toast); }, 300);
     }, 3000);
 }
 
-// Format timestamp
 function formatTimestamp(timestamp) {
     if (!timestamp) return 'Unknown';
-
     const date = new Date(timestamp * 1000);
     const now = new Date();
     const diffMs = now - date;
     const diffMins = Math.floor(diffMs / 60000);
     const diffHours = Math.floor(diffMs / 3600000);
     const diffDays = Math.floor(diffMs / 86400000);
-
     if (diffMins < 1) return 'Just now';
     if (diffMins < 60) return `${diffMins}m ago`;
     if (diffHours < 24) return `${diffHours}h ago`;
     if (diffDays < 7) return `${diffDays}d ago`;
-
     return date.toLocaleDateString();
 }
 
-// Escape HTML to prevent XSS
 function escapeHtml(text) {
-    const map = {
-        '&': '&amp;',
-        '<': '&lt;',
-        '>': '&gt;',
-        '"': '&quot;',
-        "'": '&#039;'
-    };
+    const map = { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#039;' };
     return text.replace(/[&<>"']/g, m => map[m]);
 }
 
-// Add fadeOut animation
+// Animations
 const style = document.createElement('style');
 style.textContent = `
     @keyframes fadeOut {
-        to {
-            opacity: 0;
-            transform: translateX(20px);
-        }
+        to { opacity: 0; transform: translateX(20px); }
     }
     @keyframes slideOut {
-        to {
-            transform: translateX(100%);
-            opacity: 0;
-        }
+        to { transform: translateX(100%); opacity: 0; }
     }
 `;
 document.head.appendChild(style);

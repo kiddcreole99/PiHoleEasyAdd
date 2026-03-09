@@ -163,18 +163,33 @@ h1 {
     cursor: not-allowed;
 }
 
-.auto-refresh-toggle {
+/* Refresh control dropdown */
+.refresh-control {
     display: flex;
     align-items: center;
     gap: 0.5rem;
-    cursor: pointer;
-    user-select: none;
 }
 
-.auto-refresh-toggle input[type="checkbox"] {
-    width: 18px;
-    height: 18px;
+.refresh-label {
+    font-size: 0.875rem;
+    color: var(--text-secondary);
+    white-space: nowrap;
+}
+
+.refresh-select {
+    padding: 0.5rem 0.75rem;
+    font-size: 0.875rem;
+    border: 1px solid var(--border-color);
+    border-radius: 6px;
+    background: var(--card-bg);
+    color: var(--text-primary);
     cursor: pointer;
+    transition: border-color 0.2s;
+}
+
+.refresh-select:focus {
+    outline: none;
+    border-color: var(--primary-color);
 }
 
 .theme-toggle {
@@ -352,6 +367,126 @@ h1 {
     border-left-color: var(--danger-color);
 }
 
+.toast.warning {
+    border-left-color: #f59e0b;
+}
+
+/* Blocking control section */
+.blocking-control {
+    background: var(--card-bg);
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    padding: 1rem 1.25rem;
+    margin-bottom: 1.5rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+}
+
+.blocking-status-row {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    flex-wrap: wrap;
+}
+
+.blocking-indicator {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 0.875rem;
+    font-weight: 500;
+}
+
+.blocking-dot {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    background: var(--text-secondary);
+}
+
+.blocking-dot.active {
+    background: var(--success-color);
+    animation: pulse 2s ease-in-out infinite;
+}
+
+.blocking-dot.disabled {
+    background: var(--danger-color);
+    animation: none;
+}
+
+.blocking-countdown {
+    font-size: 0.8rem;
+    color: var(--text-secondary);
+}
+
+.blocking-actions {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    flex-wrap: wrap;
+}
+
+.duration-select {
+    padding: 0.5rem 0.75rem;
+    font-size: 0.875rem;
+    border: 1px solid var(--border-color);
+    border-radius: 6px;
+    background: var(--card-bg);
+    color: var(--text-primary);
+    cursor: pointer;
+    transition: border-color 0.2s;
+}
+
+.duration-select:focus {
+    outline: none;
+    border-color: var(--primary-color);
+}
+
+.custom-duration-input {
+    width: 90px;
+    padding: 0.5rem 0.75rem;
+    font-size: 0.875rem;
+    border: 1px solid var(--border-color);
+    border-radius: 6px;
+    background: var(--card-bg);
+    color: var(--text-primary);
+    transition: border-color 0.2s;
+}
+
+.custom-duration-input:focus {
+    outline: none;
+    border-color: var(--primary-color);
+}
+
+.btn-danger {
+    background: var(--danger-color);
+    color: white;
+}
+
+.btn-danger:hover:not(:disabled) {
+    background: #dc2626;
+}
+
+.btn-danger:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+
+.btn-success {
+    background: var(--success-color);
+    color: white;
+}
+
+.btn-success:hover:not(:disabled) {
+    background: var(--success-hover);
+}
+
+.btn-success:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+
 @keyframes slideIn {
     from {
         transform: translateX(100%);
@@ -390,5 +525,15 @@ h1 {
         right: 1rem;
         left: 1rem;
         bottom: 1rem;
+    }
+
+    .blocking-actions {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+
+    .duration-select,
+    .custom-duration-input {
+        width: 100%;
     }
 }
