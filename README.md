@@ -19,6 +19,8 @@ The application displays:
 - Search bar for filtering domains
 - List of blocked domains with timestamps and block counts
 - "Allow" button for each domain to add to whitelist
+<img width="1215" height="758" alt="image" src="https://github.com/user-attachments/assets/ab5a2fe8-84b7-40e7-ad76-c8590bc15b86" />
+
 
 ## Prerequisites
 
