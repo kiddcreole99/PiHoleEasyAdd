@@ -26,7 +26,7 @@ The application displays:
 
 - Docker and Docker Compose installed
 - PiHole v6.0.6 running on your network
-- Network access to your PiHole instance (IP: 192.168.1.2 in this setup)
+- Network access to your PiHole instance (IP: 192.168.1.2 in this example)
 
 ## PiHole Authentication Setup
 
@@ -34,7 +34,7 @@ This application uses your PiHole web interface password for authentication. PiH
 
 ### What You Need
 
-Simply use the same password you use to log into your PiHole web interface at `http://192.168.1.2/admin`.
+Simply use the same password you use to log into your PiHole web interface at `http://192.168.1.2/admin` (or whatever IP your PiHole uses).
 
 **Don't remember your password?** Reset it via SSH:
 
